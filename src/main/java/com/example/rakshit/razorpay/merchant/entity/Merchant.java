@@ -28,7 +28,7 @@ public class Merchant {
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
+    @Column(length = 200)
     private String websiteUrl;
 
     @Column(length = 100)
