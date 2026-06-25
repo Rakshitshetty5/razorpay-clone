@@ -1,5 +1,6 @@
 package com.example.rakshit.razorpay.payment.dto.request;
 
+import com.example.rakshit.razorpay.common.enums.PaymentMethod;
 import jakarta.validation.constraints.NotNull;
 
 import java.util.Map;
@@ -11,7 +12,7 @@ public record PaymentInitRequest(
         UUID orderId,
 
         @NotNull(message = "Payment method is required")
-        UUID paymentMethod,
+        PaymentMethod method,
 
         Map<String, Object> methodDetails
 ) {

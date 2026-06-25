@@ -5,6 +5,7 @@ import com.example.rakshit.razorpay.common.entity.Money;
 import com.example.rakshit.razorpay.common.enums.PaymentMethod;
 import com.example.rakshit.razorpay.common.enums.PaymentStatus;
 import jakarta.persistence.*;
+import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -13,6 +14,11 @@ import java.util.Map;
 import java.util.UUID;
 
 @Entity
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 @Table(name = "payment",
     indexes = {
         @Index(name = "idx_payment_order_id", columnList = "order_id"),
@@ -48,6 +54,9 @@ public class Payment extends BaseEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "method_details", columnDefinition = "jsonb")
     private Map<String, Object> methodDetails;
+
+    @Column(length = 100)
+    private String processorReference;
 
     @Column(length = 100)
     private String bankReference;

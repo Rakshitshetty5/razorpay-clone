@@ -1,0 +1,13 @@
+package com.example.rakshit.razorpay.payment.gateway.adapters;
+
+import com.example.rakshit.razorpay.payment.gateway.PaymentAdapter;
+import com.example.rakshit.razorpay.payment.gateway.dto.PaymentRequest;
+import com.example.rakshit.razorpay.payment.gateway.dto.PaymentResult;
+
+public class UpiPaymentAdapter implements PaymentAdapter {
+
+    @Override
+    public PaymentResult initiate(PaymentRequest request){
+        return null;
+    }
+}
