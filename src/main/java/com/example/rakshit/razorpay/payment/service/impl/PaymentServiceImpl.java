@@ -2,6 +2,7 @@ package com.example.rakshit.razorpay.payment.service.impl;
 
 
 import com.example.rakshit.razorpay.common.enums.OrderStatus;
+import com.example.rakshit.razorpay.common.enums.PaymentEvent;
 import com.example.rakshit.razorpay.common.enums.PaymentStatus;
 import com.example.rakshit.razorpay.common.exception.BusinessRuleViolationException;
 import com.example.rakshit.razorpay.common.exception.ResourceNotFoundException;
@@ -16,10 +17,12 @@ import com.example.rakshit.razorpay.payment.mapper.PaymentMapper;
 import com.example.rakshit.razorpay.payment.repository.OrderRepository;
 import com.example.rakshit.razorpay.payment.repository.PaymentRespository;
 import com.example.rakshit.razorpay.payment.service.PaymentService;
+import com.example.rakshit.razorpay.payment.statemachine.PaymentTransitionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -31,6 +34,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final OrderRepository orderRepository;
     private final PaymentMapper paymentMapper;
     private final PaymentGatewayRouter paymentGatewayRouter;
+    private final PaymentTransitionService paymentTransitionService;
 
 
     @Override
@@ -82,6 +86,36 @@ public class PaymentServiceImpl implements PaymentService {
 
         payment = paymentRespository.save(payment);
         orderRepository.save(order);
+
+        return paymentMapper.toResponse(payment);
+    }
+
+    @Override
+    public PaymentResponse capture(UUID merchantId, UUID paymentId) {
+        Payment payment = paymentRespository.findByIdAndMerchantId(paymentId, merchantId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", paymentId));
+
+        paymentTransitionService.apply(payment, PaymentEvent.CAPTURE_REQUEST);
+
+        PaymentResult paymentResult = paymentGatewayRouter.capture(
+                payment.getMethod(),
+                paymentId
+        );
+
+        if(paymentResult instanceof PaymentResult.Success success){
+            paymentTransitionService.apply(payment, PaymentEvent.CAPTURE_SUCCESS);
+            payment.setCapturedAt(LocalDateTime.now());
+            log.info("Payment captured, payment id: {}", paymentId);
+        }else if(paymentResult instanceof PaymentResult.Failure failure){
+            paymentTransitionService.apply(payment, PaymentEvent.CAPTURE_FAIL);
+            payment.setErrorCode(failure.errorCode());
+            payment.setErrorDescription(failure.errorDescription());
+            log.warn("Payment capture failed, paymentId: {}", paymentId);
+        }
+
+        payment = paymentRespository.save(payment);
+
+        //TODO: send kafka event
 
         return paymentMapper.toResponse(payment);
     }
