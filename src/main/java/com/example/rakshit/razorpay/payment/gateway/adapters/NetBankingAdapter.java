@@ -38,7 +38,7 @@ public class NetBankingAdapter implements PaymentAdapter {
             return switch (paymentProcessorResponse){
               case PaymentProcessorResponse.Success success -> new PaymentResult.Success(success.bankReference());
               case PaymentProcessorResponse.Failure failure -> new PaymentResult.Failure(failure.errorCode(), failure.errorDescription());
-                case PaymentProcessorResponse.Pending pending -> new PaymentResult.Pending(pending.processorReference());
+              case PaymentProcessorResponse.Pending pending -> new PaymentResult.Pending(pending.processorReference());
             };
 
         }catch(Exception e){
