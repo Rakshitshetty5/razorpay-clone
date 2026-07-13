@@ -4,7 +4,9 @@ import com.example.rakshit.razorpay.common.util.RandomizerUtil;
 import com.example.rakshit.razorpay.payment.processor.PaymentProcessor;
 import com.example.rakshit.razorpay.payment.processor.dto.PaymentProcessorRequest;
 import com.example.rakshit.razorpay.payment.processor.dto.PaymentProcessorResponse;
+import org.springframework.stereotype.Component;
 
+@Component
 public class NetBankingProcessor implements PaymentProcessor {
 
     @Override

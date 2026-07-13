@@ -18,6 +18,7 @@ import com.example.rakshit.razorpay.payment.repository.OrderRepository;
 import com.example.rakshit.razorpay.payment.repository.PaymentRespository;
 import com.example.rakshit.razorpay.payment.service.PaymentService;
 import com.example.rakshit.razorpay.payment.statemachine.PaymentTransitionService;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,7 +40,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentResponse initiate(UUID merchantId, PaymentInitRequest request){
-        OrderRecord order = orderRepository.findByIdAndMerchantId(merchantId, request.orderId())
+        OrderRecord order = orderRepository.findByIdAndMerchantId(request.orderId(), merchantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", request.orderId()));
 
         if(order.getOrderStatus() != OrderStatus.CREATED && order.getOrderStatus() != OrderStatus.ATTEMPTED){
@@ -56,6 +57,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .merchantId(merchantId)
                 .method(request.method())
                 .status(PaymentStatus.CREATED)
+                .idempotencyKey(UUID.randomUUID().toString()) //TODO
                 .methodDetails(request.methodDetails())
                 .build();
 
@@ -70,12 +72,14 @@ public class PaymentServiceImpl implements PaymentService {
                 request.methodDetails()
         );
 
+        paymentTransitionService.apply(payment, PaymentEvent.AUTHORIZE_ATTEMPT);
         PaymentResult result = paymentGatewayRouter.initiate(paymentRequest);
 
         switch (result){
             case PaymentResult.Pending pending -> payment.setProcessorReference(pending.registrationRef());
             case PaymentResult.Failure failure -> {
-                payment.setStatus(PaymentStatus.FAILED);
+//                payment.setStatus(PaymentStatus.FAILED);
+                paymentTransitionService.apply(payment, PaymentEvent.AUTHORIZE_FAIL);
                 payment.setErrorCode(failure.errorCode());
                 payment.setErrorDescription(failure.errorDescription());
             }
@@ -118,6 +122,52 @@ public class PaymentServiceImpl implements PaymentService {
         //TODO: send kafka event
 
         return paymentMapper.toResponse(payment);
+    }
+
+    @Override
+    @Transactional
+    public void resolveAuthorization(UUID paymentId, boolean approve,
+                                     String bankRef, String errorCode, String errorDescription) {
+
+        Payment payment = paymentRespository.findById(paymentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Payment", paymentId));
+
+        if(payment.getStatus() != PaymentStatus.AUTHORIZING){
+            log.warn("Payment is not in Authorizing state, paymentID: {}, status: {}", paymentId, payment.getStatus());
+            return;
+        }
+
+        OrderRecord orderRecord = payment.getOrder();
+
+        if(approve){
+            paymentTransitionService.apply(payment, PaymentEvent.AUTHORIZE_SUCCESS); //Authorized
+            payment.setBankReference(bankRef);
+            payment.setAuthorizedAt(LocalDateTime.now());
+
+            //AUTO-CAPTURE
+            paymentTransitionService.apply(payment, PaymentEvent.CAPTURE_REQUEST); //capturing
+            PaymentResult captureResult = paymentGatewayRouter.capture(payment.getMethod(), paymentId);
+
+            if(captureResult instanceof PaymentResult.Success success){
+                paymentTransitionService.apply(payment, PaymentEvent.CAPTURE_SUCCESS); //captured
+                payment.setCapturedAt(LocalDateTime.now());
+                orderRecord.setOrderStatus(OrderStatus.PAID);
+            }else if(captureResult instanceof PaymentResult.Failure failure){
+                paymentTransitionService.apply(payment, PaymentEvent.CAPTURE_FAIL); // capture fail
+                payment.setErrorCode(failure.errorCode());
+                payment.setErrorDescription(failure.errorDescription());
+            }
+        }else{
+            paymentTransitionService.apply(payment, PaymentEvent.AUTHORIZE_FAIL);
+            payment.setErrorCode(errorCode);
+            payment.setErrorDescription(errorDescription);
+        }
+
+        paymentRespository.save(payment);
+        orderRepository.save(orderRecord);
+
+        //TODO: Send an outbox kafka event
+
     }
 
 }
