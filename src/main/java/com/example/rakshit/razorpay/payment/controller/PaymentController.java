@@ -1,5 +1,6 @@
 package com.example.rakshit.razorpay.payment.controller;
 
+import com.example.rakshit.razorpay.merchant.security.MerchantContext;
 import com.example.rakshit.razorpay.payment.dto.request.PaymentInitRequest;
 import com.example.rakshit.razorpay.payment.dto.response.PaymentResponse;
 import com.example.rakshit.razorpay.payment.service.PaymentService;
@@ -20,11 +21,11 @@ import java.util.UUID;
 public class PaymentController {
 
     private final PaymentService paymentService;
-    UUID merchantId = UUID.fromString("e60239ea-0533-441f-833b-cbd1f71a67de");
+    private final MerchantContext merchantContext;
 
     @PostMapping
     public ResponseEntity<PaymentResponse> initate(@RequestBody @Valid PaymentInitRequest request){
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(paymentService.initiate(merchantId, request));
+                .body(paymentService.initiate(merchantContext.getMerchantId(), request));
     }
 }

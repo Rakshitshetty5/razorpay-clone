@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -29,6 +30,7 @@ public class AuthServiceImpl implements AuthService {
     private final MerchantRepository merchantRepository;
     private final AppUserRepository appUserRepository;
     private final AuthenticationManager authenticationManager;
+    private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
     @Override
@@ -53,7 +55,7 @@ public class AuthServiceImpl implements AuthService {
         AppUser appUser = AppUser.builder()
                 .merchant(merchant)
                 .email(request.email())
-                .passwordHash(request.password()) //TODO: encrypt
+                .passwordHash(passwordEncoder.encode(request.password()))
                 .role(UserRole.OWNER)
                 .build();
 
