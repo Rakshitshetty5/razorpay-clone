@@ -38,7 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
-            String jwtToken = authorizationHeader.substring("Bearer".length());
+            String jwtToken = authorizationHeader.substring("Bearer".length()).trim();
 
             Claims claims = jwtUtil.verfiyAccessToken(jwtToken);
 

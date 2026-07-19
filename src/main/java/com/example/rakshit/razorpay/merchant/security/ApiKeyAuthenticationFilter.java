@@ -90,7 +90,8 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String[] decode(String header){
-        String encoded = header.substring(BASIC_PREFIX.length());
+        String encoded = header.substring(BASIC_PREFIX.length()).trim();
+
         String decoded = new String(Base64.getDecoder().decode(encoded), StandardCharsets.UTF_8);
 
         int colon = decoded.indexOf(":");

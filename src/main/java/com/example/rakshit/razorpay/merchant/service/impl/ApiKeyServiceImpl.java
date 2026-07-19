@@ -31,6 +31,7 @@ public class ApiKeyServiceImpl implements ApiKeyService {
     private BCryptPasswordEncoder BCRYPT = new BCryptPasswordEncoder();
 
     @Override
+    @Transactional
     public ApiKeyCreateResponse create(UUID merchantId, CreateApiKeyRequest request){
 
         Merchant merchant = merchantRepository.findById(merchantId)
