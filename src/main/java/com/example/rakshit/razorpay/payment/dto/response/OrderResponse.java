@@ -12,10 +12,11 @@ public record OrderResponse(
         UUID merchantId,
         String receipt,
         Money amount,
+        UUID customerId,
         OrderStatus status,
         Integer attempts,
         Map<String, Object> notes,
-        LocalDateTime expiresAt
-//        LocalDateTime createdAt
+        LocalDateTime expiresAt,
+        LocalDateTime createdAt
 ) {
 }

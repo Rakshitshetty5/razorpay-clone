@@ -3,6 +3,8 @@ package com.example.rakshit.razorpay.merchant.entity;
 
 import com.example.rakshit.razorpay.common.entity.BaseEntity;
 import jakarta.persistence.*;
+import lombok.*;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -14,6 +16,11 @@ import java.util.UUID;
         @Index(name = "idx_customer_email", columnList = "email")
     }
 )
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
 public class Customer extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -26,7 +33,7 @@ public class Customer extends BaseEntity {
     private String email;
 
     @Column(length = 20)
-    private String contactNumber;
+    private String phone;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "merchant_id", nullable = false)

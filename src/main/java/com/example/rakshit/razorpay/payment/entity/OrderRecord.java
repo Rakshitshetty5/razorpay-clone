@@ -33,6 +33,7 @@ public class OrderRecord extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @Column(name = "customer_id")
     private UUID customerId;
 
     //no FK- cross boundary service

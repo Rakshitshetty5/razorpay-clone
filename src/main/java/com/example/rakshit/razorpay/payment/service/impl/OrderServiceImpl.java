@@ -4,6 +4,7 @@ import com.example.rakshit.razorpay.common.enums.OrderStatus;
 import com.example.rakshit.razorpay.common.exception.BusinessRuleViolationException;
 import com.example.rakshit.razorpay.common.exception.DuplicateResourceException;
 import com.example.rakshit.razorpay.common.exception.ResourceNotFoundException;
+import com.example.rakshit.razorpay.merchant.service.CustomerService;
 import com.example.rakshit.razorpay.payment.dto.request.CreateOrderRequest;
 import com.example.rakshit.razorpay.payment.dto.response.OrderResponse;
 import com.example.rakshit.razorpay.payment.dto.response.PaymentResponse;
@@ -14,12 +15,11 @@ import com.example.rakshit.razorpay.payment.mapper.PaymentMapper;
 import com.example.rakshit.razorpay.payment.repository.OrderRepository;
 import com.example.rakshit.razorpay.payment.repository.PaymentRespository;
 import com.example.rakshit.razorpay.payment.service.OrderService;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.query.Order;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,22 +28,34 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Transactional(readOnly = true)
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
     private final PaymentMapper paymentMapper;
     private final PaymentRespository paymentRepository;
+    private final CustomerService customerService;
 
     @Value("${payment.order.default-order-expiry-minutes:30}")
     private int defaultOrderExpiryMinutes;
 
     @Override
+    @Transactional
     public OrderResponse create(UUID merchantId, CreateOrderRequest request){
 
         if(request.receipt() != null && orderRepository.existsByMerchantIdAndReceipt(merchantId, request.receipt())){
             throw new DuplicateResourceException("ORDER_RECEIPT_DUPLICATE", "Order with receipt already exists: " + request.receipt());
         }
+
+        UUID customerId = null;
+        if(request.customer() != null){
+            customerId = customerService.findOrCreate(merchantId,
+                    request.customer().email(),
+                    request.customer().name(),
+                    request.customer().phone());
+        }
+
 
         OrderRecord orderRecord = OrderRecord.builder()
                 .receipt(request.receipt())
@@ -51,6 +63,7 @@ public class OrderServiceImpl implements OrderService {
                 .amount(request.amount())
                 .merchantId(merchantId)
                 .notes(request.notes())
+                .customerId(customerId)
                 .expiresAt(request.expiresAt() != null ? request.expiresAt() :
                         LocalDateTime.now().plusMinutes(defaultOrderExpiryMinutes))
                 .build();
@@ -68,6 +81,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public OrderResponse cancel(UUID merchantId, UUID orderId){
         OrderRecord orderRecord = orderRepository.findByIdAndMerchantId(orderId, merchantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order", orderId));
