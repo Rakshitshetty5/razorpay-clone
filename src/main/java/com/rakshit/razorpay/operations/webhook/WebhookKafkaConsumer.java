@@ -1,6 +1,5 @@
 package com.rakshit.razorpay.operations.webhook;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rakshit.razorpay.common.dto.WebhookTarget;
 import com.rakshit.razorpay.common.enums.WebhookEventStatus;
 import com.rakshit.razorpay.common.util.SignerUtil;
@@ -10,9 +9,12 @@ import com.rakshit.razorpay.operations.repository.WebhookEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.dao.DataAccessException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.CannotCreateTransactionException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,12 +31,13 @@ public class WebhookKafkaConsumer {
     private final SignerUtil signerUtil;
     private final WebhookEventRepository webhookEventRepository;
     private final WebhookRetryQueue retryQueue;
+    private final WebhookDlqRecorder dlqRecorder;
 
     @KafkaListener(topics = {
-            "${app.kafka.topics.payments:payments.events}",
-            "${app.kafka.topics.orders:orders.events}",
-            "${app.kafka.topics.refunds:refunds.events}",
-            "${app.kafka.topics.settlements:settlements.events}"
+            "${app.kafka.topics.payment:payments.events}",
+            "${app.kafka.topics.order:orders.events}",
+            "${app.kafka.topics.refund:refund.events}",
+            "${app.kafka.topics.settlement:settlement.events}"
     })
     public void onWebhookEvent(ConsumerRecord<String, Map<String, Object>> record, Acknowledgment ack) {
         try {
@@ -81,13 +84,17 @@ public class WebhookKafkaConsumer {
 
                 //store in redis (if unavailable we have reconcile to handle afterwards)
                 retryQueue.enqueue(webhookEvent.getId(), webhookEvent.getNextRetryAt());
+
+                log.info("Created a webhook event with id: {}", webhookEvent.getId());
+
             }
-
             ack.acknowledge();
-        } catch (Exception e) {
-            log.error("Webhook consumer failed to process the record, offset: {}", record.offset());
-
-//            TODO: check exception for acknowledging
+        }catch (DataAccessException | CannotCreateTransactionException dbDown){
+            log.error("Webhook consumer failed due to DB down, Could not process the record, offset: {}", record.offset(), dbDown);
+        }catch (Exception logicError){
+            log.error("Webhook consumer failed due to logical error, Could not process the record, offset: {}", record.offset(), logicError);
+            dlqRecorder.recordConsumerFailed(record, logicError.getMessage());
+            ack.acknowledge(); //to update offset as this record cannot be processed
         }
     }
 }

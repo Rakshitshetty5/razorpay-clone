@@ -27,7 +27,8 @@ public class WebSecurityConfig {
             "/v1/auth/**",
             "/v1/merchant/**",
             "/v1/admin/**",
-            "/actuator/**"
+            "/actuator/**",
+            "/webhook/**"
     };
 
     private static final String[] API_KEY_ROUTES = {
@@ -45,7 +46,7 @@ public class WebSecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/v1/auth/signup", "/v1/auth/login").permitAll()
+                        .requestMatchers("/v1/auth/signup", "/v1/auth/login", "/webhook/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

@@ -113,7 +113,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
                 apiKey.isEnabled()
         );
         apiKeyCache.put(keyId, apiKeyCacheEntry);
-        return  apiKeyCacheEntry;
+        return apiKeyCacheEntry;
     }
 
     private boolean secretMatches(String rawSecret, ApiKeyCacheEntry apiKey){

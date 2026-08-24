@@ -2,6 +2,7 @@ package com.rakshit.razorpay.operations.entity;
 
 import com.rakshit.razorpay.common.entity.BaseEntity;
 import jakarta.persistence.*;
+import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -11,6 +12,11 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "dlq_event")
+@Builder
+@Getter
+@Setter
+@RequiredArgsConstructor
+@AllArgsConstructor
 public class DlqEvent extends BaseEntity {
 
     @Id
@@ -18,7 +24,7 @@ public class DlqEvent extends BaseEntity {
     private UUID id;
 
     @Column(nullable = false)
-    private UUID merchant_id;
+    private UUID merchantId;
 
     @OneToOne(fetch = FetchType.LAZY)
     private  WebhookEvent webhookEvent;

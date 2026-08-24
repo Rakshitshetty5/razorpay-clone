@@ -14,7 +14,6 @@ public record UpdateWebhookConfigRequest(
         // Comma-separated fine-grained event type names (e.g. "PAYMENT_STATUS_CHANGED,REFUND_CREATED").
         // Null/blank/"ALL" subscribes to every event type.
         @Size(max = 1000)
-        @Size(max = 1000)
         String eventTypes
 
         ) {

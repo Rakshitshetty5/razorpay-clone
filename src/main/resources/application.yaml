@@ -18,6 +18,8 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
   kafka:
+    listener:
+      ack-mode: manual
     bootstrap-servers: ${KAFKA_BROKERS:localhost:29092}
     producer:
       acks: all
@@ -39,8 +41,13 @@ spring:
         spring.json.use.type.headers: false
         spring.json.value.default.type: java.util.LinkedHashMap
 
+threads:
+  virtual:
+    enabled: true
+
+
 vault:
-  master-key: asdf97asd9fuajsiodfua98s7dfyuajsildfhao8s7dfuoaisjfdioas98df7yua8s
+  master-key: c29tZXJhbmRvbTI1NmJpdHNhZXNrZXkxMjM0NTY3ODk=
 
 
 payment:
